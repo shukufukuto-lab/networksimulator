@@ -24,6 +24,19 @@
   letter-spacing: 0.5px;
 }
 
+.titleLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: #89b4fa;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.titleLink:hover {
+  color: #b4d0ff;
+}
+
 .headerActions {
   display: flex;
   gap: 8px;

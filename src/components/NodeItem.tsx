@@ -35,6 +35,8 @@ interface Props {
   node: NetworkNode;
   isSelected: boolean;
   isHovered: boolean;
+  /** trueのときのみポート接続点を表示・クリック可能にする */
+  portsInteractive: boolean;
   onMouseDown: (e: React.MouseEvent<SVGRectElement>) => void;
   onMouseUp: (e: React.MouseEvent<SVGGElement>) => void;
   onMouseEnter: () => void;
@@ -47,6 +49,7 @@ export default function NodeItem({
   node,
   isSelected,
   isHovered,
+  portsInteractive,
   onMouseDown,
   onMouseUp,
   onMouseEnter,
@@ -110,8 +113,8 @@ export default function NodeItem({
         </text>
       )}
 
-      {/* 接続点（ホバー時のみ、空きポート分だけ表示） */}
-      {isHovered &&
+      {/* 接続点（portsInteractiveのみ表示・クリック可） */}
+      {portsInteractive &&
         freePorts.map((port, i) => {
           const cp =
             CONNECTION_POINT_POSITIONS[i % CONNECTION_POINT_POSITIONS.length];

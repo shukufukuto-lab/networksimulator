@@ -40,6 +40,19 @@ export default function DnsDetail({ node, dispatch }: Props) {
     <div className={styles.panel}>
       <div className={styles.heading}>DNS: {node.name}</div>
 
+      {/* ポート一覧 */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>ポート</div>
+        {node.ports.map((port) => (
+          <div key={port.id} className={styles.ifaceItem}>
+            <span className={styles.ifaceName}>{port.name}</span>
+            <span className={styles.ifaceIp}>
+              {port.linkedLinkId ? "使用中" : "空き"}
+            </span>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.section}>
         <div className={styles.sectionTitle}>ネットワーク設定</div>
         <div className={styles.field}>
