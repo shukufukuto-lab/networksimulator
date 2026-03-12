@@ -41,31 +41,42 @@ function buildSteps(
   hops: NodeId[],
   commType: CommunicationType
 ): SimulationStep[] {
-  const steps: SimulationStep[] = [];
+  const typeLabel =
+    commType === "ping" ? "Ping" : commType === "dns" ? "DNS" : "HTTP";
+
+  const outbound: SimulationStep[] = [];
   for (let i = 0; i < hops.length - 1; i++) {
     const from = hops[i];
     const to = hops[i + 1];
     const link = findLinkBetween(links, from, to);
-    if (!link) continue; // リンクなしはスキップ（異常ケース）
-
-    const fromName = getNodeName(nodes, from);
-    const toName = getNodeName(nodes, to);
-    const typeLabel =
-      commType === "ping"
-        ? "Ping"
-        : commType === "dns"
-          ? "DNS"
-          : "HTTP";
-
-    steps.push({
+    if (!link) continue;
+    outbound.push({
       from,
       to,
       link: link.id,
       communicationType: commType,
-      description: `${typeLabel}: ${fromName} → ${toName}`,
+      description: `${typeLabel}: ${getNodeName(nodes, from)} → ${getNodeName(nodes, to)}`,
+      direction: "outbound",
     });
   }
-  return steps;
+
+  const returnSteps: SimulationStep[] = [];
+  for (let i = hops.length - 1; i > 0; i--) {
+    const from = hops[i];
+    const to = hops[i - 1];
+    const link = findLinkBetween(links, from, to);
+    if (!link) continue;
+    returnSteps.push({
+      from,
+      to,
+      link: link.id,
+      communicationType: commType,
+      description: `${typeLabel}(応答): ${getNodeName(nodes, from)} → ${getNodeName(nodes, to)}`,
+      direction: "return",
+    });
+  }
+
+  return [...outbound, ...returnSteps];
 }
 
 // -------------------------------------------------------------

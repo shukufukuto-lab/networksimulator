@@ -215,6 +215,7 @@ type WebResult = {
 
 type SimulationStatus = "idle" | "running" | "paused" | "finished";
 type CommunicationType = "ping" | "web" | "dns";
+type SimulationMode = "on" | "off";
 
 type SimulationStep = {
   readonly from: NodeId;
@@ -222,6 +223,7 @@ type SimulationStep = {
   readonly link: LinkId;
   readonly communicationType: CommunicationType;
   readonly description: string;
+  readonly direction: "outbound" | "return";
 };
 
 type SimulationState = {
@@ -356,5 +358,7 @@ type AppState = {
   linkCreation: LinkCreationState;
   contextMenu: ContextMenu;
   selectedNodeId: NodeId | null;
+  selectedLinkId: LinkId | null;
+  simulationMode: SimulationMode;
   readonly palette: PaletteItem[];
 };

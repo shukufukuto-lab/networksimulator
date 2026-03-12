@@ -13,11 +13,8 @@ export default function PacketAnimation({
   step,
   fromPosition,
   toPosition,
-  onComplete,
 }: PacketAnimationProps) {
   const circleRef = useRef<SVGCircleElement>(null);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (!step || !fromPosition || !toPosition) return;
@@ -29,12 +26,8 @@ export default function PacketAnimation({
         { cx: `${fromPosition.x}`, cy: `${fromPosition.y}` },
         { cx: `${toPosition.x}`, cy: `${toPosition.y}` },
       ],
-      { duration: 600, easing: "ease-in-out", fill: "forwards" }
+      { duration: 600, easing: "ease-in-out", iterations: Infinity }
     );
-
-    animation.onfinish = () => {
-      onCompleteRef.current();
-    };
 
     return () => {
       animation.cancel();
@@ -43,16 +36,26 @@ export default function PacketAnimation({
 
   if (!step || !fromPosition || !toPosition) return null;
 
+  const gradId = `packet-grad-${step.direction}`;
+  const baseColor = step.direction === "outbound" ? "#f38ba8" : "#a6e3a1";
+
   return (
-    <circle
-      ref={circleRef}
-      cx={fromPosition.x}
-      cy={fromPosition.y}
-      r={8}
-      fill="#f38ba8"
-      stroke="#1e1e2e"
-      strokeWidth={2}
-      pointerEvents="none"
-    />
+    <>
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="40%" stopColor={baseColor} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={baseColor} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle
+        ref={circleRef}
+        cx={fromPosition.x}
+        cy={fromPosition.y}
+        r={10}
+        fill={`url(#${gradId})`}
+        pointerEvents="none"
+      />
+    </>
   );
 }
