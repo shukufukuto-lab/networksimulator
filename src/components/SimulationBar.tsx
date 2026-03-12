@@ -5,6 +5,7 @@ import styles from "./SimulationBar.module.css";
 
 interface Props {
   simulation: SimulationState;
+  simulationMode: SimulationMode;
   dispatch: React.Dispatch<Action>;
 }
 
@@ -15,7 +16,7 @@ const STATUS_LABEL: Record<SimulationStatus, string> = {
   finished: "完了",
 };
 
-export default function SimulationBar({ simulation, dispatch }: Props) {
+export default function SimulationBar({ simulation, simulationMode, dispatch }: Props) {
   const { status, steps, currentStepIndex } = simulation;
 
   const currentStep =
@@ -42,7 +43,7 @@ export default function SimulationBar({ simulation, dispatch }: Props) {
         )}
       </div>
       <div className={styles.controls}>
-        {(status === "paused") && (
+        {simulationMode === "on" && status === "paused" && (
           <button
             className={`${styles.btn} ${styles.next}`}
             onClick={() => dispatch({ type: "NEXT_STEP" })}

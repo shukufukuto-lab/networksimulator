@@ -74,6 +74,9 @@ export type Action =
   | { type: "HIDE_CONTEXT_MENU" }
   | { type: "SELECT_NODE"; payload: { nodeId: NodeId } }
   | { type: "DESELECT_NODE" }
+  | { type: "SELECT_LINK"; payload: { linkId: LinkId } }
+  | { type: "DESELECT_LINK" }
+  | { type: "TOGGLE_SIMULATION_MODE" }
   | { type: "START_SIMULATION"; payload: PingRequest | WebRequest }
   | { type: "NEXT_STEP" }
   | { type: "RESET_SIMULATION" }
@@ -92,6 +95,8 @@ const initialState: AppState = {
   linkCreation: { step: "idle" },
   contextMenu: { visible: false },
   selectedNodeId: null,
+  selectedLinkId: null,
+  simulationMode: "off" as SimulationMode,
   palette: PALETTE_ITEMS,
 };
 
@@ -164,6 +169,10 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         topology: { nodes, links },
         contextMenu: { visible: false },
+        selectedLinkId:
+          state.selectedLinkId === action.payload.linkId
+            ? null
+            : state.selectedLinkId,
         simulation: INITIAL_SIMULATION_STATE,
       };
     }
@@ -185,6 +194,20 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case "DESELECT_NODE":
       return { ...state, selectedNodeId: null };
+    case "SELECT_LINK":
+      return {
+        ...state,
+        selectedLinkId: action.payload.linkId,
+        selectedNodeId: null,
+        contextMenu: { visible: false },
+      };
+    case "DESELECT_LINK":
+      return { ...state, selectedLinkId: null };
+    case "TOGGLE_SIMULATION_MODE":
+      return {
+        ...state,
+        simulationMode: state.simulationMode === "on" ? "off" : "on",
+      };
     case "START_SIMULATION": {
       const req = action.payload;
       const simState =
@@ -199,7 +222,16 @@ function reducer(state: AppState, action: Action): AppState {
               state.topology.links,
               req
             );
-      return { ...state, simulation: simState };
+      // シミュレーションモードOFFの場合は即座に完了状態へ
+      const finalSim =
+        state.simulationMode === "off"
+          ? {
+              ...simState,
+              status: "finished" as SimulationStatus,
+              currentStepIndex: simState.steps.length,
+            }
+          : simState;
+      return { ...state, simulation: finalSim };
     }
     case "NEXT_STEP":
       return { ...state, simulation: advanceSimulation(state.simulation) };
@@ -218,6 +250,7 @@ function reducer(state: AppState, action: Action): AppState {
         topology: { nodes, links },
         simulation: INITIAL_SIMULATION_STATE,
         selectedNodeId: null,
+        selectedLinkId: null,
         contextMenu: { visible: false },
         drag: { kind: "none" },
         linkCreation: { step: "idle" },
@@ -238,6 +271,27 @@ export default function SimulatorApp() {
     const close = () => dispatch({ type: "HIDE_CONTEXT_MENU" });
     window.addEventListener("click", close);
     return () => window.removeEventListener("click", close);
+  }, []);
+
+  // Deleteキーで選択中のリンク/ノードを削除
+  const selectedLinkIdRef = useRef<LinkId | null>(null);
+  const selectedNodeIdRef = useRef<NodeId | null>(null);
+  selectedLinkIdRef.current = state.selectedLinkId;
+  selectedNodeIdRef.current = state.selectedNodeId;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (selectedLinkIdRef.current) {
+        dispatch({ type: "DELETE_LINK", payload: { linkId: selectedLinkIdRef.current } });
+      } else if (selectedNodeIdRef.current) {
+        dispatch({ type: "DELETE_NODE", payload: { nodeId: selectedNodeIdRef.current } });
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleSave = useCallback(() => {
@@ -269,6 +323,12 @@ export default function SimulatorApp() {
       <header className={styles.header}>
         <Link href="/" className={styles.titleLink}>Network Simulator</Link>
         <div className={styles.headerActions}>
+          <button
+            className={`${styles.headerBtn} ${state.simulationMode === "on" ? styles.modeOn : ""}`}
+            onClick={() => dispatch({ type: "TOGGLE_SIMULATION_MODE" })}
+          >
+            {state.simulationMode === "on" ? "ステップ実行: ON" : "ステップ実行: OFF"}
+          </button>
           <button className={styles.headerBtn} onClick={handleSave}>
             保存
           </button>
@@ -299,9 +359,15 @@ export default function SimulatorApp() {
             linkCreation={state.linkCreation}
             simulation={state.simulation}
             selectedNodeId={state.selectedNodeId}
+            selectedLinkId={state.selectedLinkId}
+            simulationMode={state.simulationMode}
             dispatch={dispatch}
           />
-          <SimulationBar simulation={state.simulation} dispatch={dispatch} />
+          <SimulationBar
+            simulation={state.simulation}
+            simulationMode={state.simulationMode}
+            dispatch={dispatch}
+          />
         </div>
 
         {/* 右パネル: 設定パネル */}

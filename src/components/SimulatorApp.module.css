@@ -87,3 +87,9 @@
   color: #6c7086;
   font-size: 13px;
 }
+
+.modeOn {
+  background: #313244;
+  color: #a6e3a1;
+  border-color: #a6e3a1;
+}

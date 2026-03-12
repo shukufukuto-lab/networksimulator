@@ -173,6 +173,16 @@ export function addLink(
   // ポート使用中チェック
   if (portA.linkedLinkId !== null || portB.linkedLinkId !== null) return null;
 
+  // 重複リンク禁止（同一ノード間にすでにリンクが存在する）
+  for (const link of links.values()) {
+    if (
+      (link.nodeA === nodeAId && link.nodeB === nodeBId) ||
+      (link.nodeA === nodeBId && link.nodeB === nodeAId)
+    ) {
+      return null;
+    }
+  }
+
   // リンク作成
   const newLink: Link = {
     id: generateLinkId(),

@@ -8,7 +8,11 @@
       "Bash(taskkill /PID 2704 /F 2>&1; sleep 2 && echo \"done\")",
       "Bash(cmd.exe /c \"taskkill /PID 2704 /F\" 2>&1)",
       "Bash(cmd.exe /c \"taskkill /IM node.exe /F\" 2>&1 && echo \"killed\")",
-      "Bash(powershell.exe -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Output 'done'\")"
+      "Bash(powershell.exe -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Output 'done'\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npx tsc --noEmit 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npx tsc --noEmit 2>&1; echo \"Exit code: $?\")",
+      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npm run build 2>&1 | tail -20)"
     ]
   }
 }
