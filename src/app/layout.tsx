@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ネットワークシミュレータ",
-  description: "ネットワークトポロジシミュレータ",
+  title: "NetworkSimulator",
+  description: "Network Topology Simulator",
 };
 
 export default function RootLayout({
