@@ -18,10 +18,10 @@ export function parseRouterConfig(
   configText: string,
   currentInterfaces: RouterInterface[]
 ): { interfaces: RouterInterface[]; staticRoutes: StaticRoute[] } {
-  // 既存インターフェースをコピー（名前をキーにした Map）
+  // 既存インターフェースをコピー（portNameをキーにした Map）
   const ifaceMap = new Map<string, RouterInterface>();
   for (const iface of currentInterfaces) {
-    ifaceMap.set(iface.name, { ...iface });
+    ifaceMap.set(iface.portName, { ...iface });
   }
 
   const staticRoutes: StaticRoute[] = [];

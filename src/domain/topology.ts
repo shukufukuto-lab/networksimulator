@@ -1,4 +1,5 @@
 import { generateNodeId, generateLinkId } from "@/utils/id-generator";
+import { createInitialPorts } from "@/utils/node-factory";
 
 // ノード種別ごとの名前プレフィックス
 const NODE_PREFIX: Record<NodeType, string> = {
@@ -25,7 +26,7 @@ function nextNodeName(nodes: Map<NodeId, NetworkNode>, type: NodeType): string {
   return `${prefix}${max + 1}`;
 }
 
-/** ノードを新規作成（IDと名前は自動生成） */
+/** ノードを新規作成（IDと名前は自動生成）。全ポートを事前作成する。 */
 function createNode(
   nodes: Map<NodeId, NetworkNode>,
   type: NodeType,
@@ -33,24 +34,26 @@ function createNode(
 ): NetworkNode {
   const id = generateNodeId();
   const name = nextNodeName(nodes, type);
-  const base = { id, type, name, position } as const;
+  const ports = createInitialPorts(type);
+  const base = { id, type, name, position, ports } as const;
 
   switch (type) {
-    case "router":
+    case "router": {
+      // 8つのポートに対応する8つのRouterInterfaceを事前作成（すべてshutdown）
+      const interfaces: RouterInterface[] = ports.map((p) => ({
+        portName: p.name,
+        ipAddress: null,
+        subnetMask: null,
+        shutdown: true,
+      }));
       return {
         ...base,
         type: "router",
-        interfaces: [
-          {
-            name: "GigabitEthernet0/0",
-            ipAddress: null,
-            subnetMask: null,
-            shutdown: true,
-          },
-        ],
+        interfaces,
         staticRoutes: [],
         configText: "",
       };
+    }
     case "switch":
       return {
         ...base,
@@ -103,122 +106,137 @@ export function addNode(
   return { nodes: newNodes, newNode };
 }
 
-/** ノードを削除（紐づくリンクも同時削除） */
+/** ノードを削除（紐づくリンクも同時削除、他ノードのポートのlinkedLinkIdもクリア） */
 export function deleteNode(
   nodes: Map<NodeId, NetworkNode>,
   links: Map<LinkId, Link>,
   nodeId: NodeId
 ): { nodes: Map<NodeId, NetworkNode>; links: Map<LinkId, Link> } {
+  // 削除対象ノードに紐づくリンクIDを収集
+  const removedLinkIds = new Set<LinkId>();
+  for (const [linkId, link] of links) {
+    if (link.nodeA === nodeId || link.nodeB === nodeId) {
+      removedLinkIds.add(linkId);
+    }
+  }
+
+  // リンク削除
+  const newLinks = new Map(links);
+  for (const linkId of removedLinkIds) {
+    newLinks.delete(linkId);
+  }
+
+  // 他ノードのポートのlinkedLinkIdをクリア
   const newNodes = new Map(nodes);
   newNodes.delete(nodeId);
 
-  const newLinks = new Map(links);
-  for (const [linkId, link] of links) {
-    if (link.nodeA === nodeId || link.nodeB === nodeId) {
-      newLinks.delete(linkId);
+  for (const [nid, node] of newNodes) {
+    const updatedPorts = node.ports.map((p) =>
+      p.linkedLinkId !== null && removedLinkIds.has(p.linkedLinkId)
+        ? { ...p, linkedLinkId: null }
+        : p
+    );
+    // ポートが変わっていたらノードを更新
+    if (updatedPorts.some((p, i) => p !== node.ports[i])) {
+      newNodes.set(nid, { ...node, ports: updatedPorts } as NetworkNode);
     }
   }
 
   return { nodes: newNodes, links: newLinks };
 }
 
-/** 特定ノードに接続されているリンク数を数える */
-function countLinksFor(links: Map<LinkId, Link>, nodeId: NodeId): number {
-  let count = 0;
-  for (const link of links.values()) {
-    if (link.nodeA === nodeId || link.nodeB === nodeId) count++;
-  }
-  return count;
-}
-
 /**
  * リンクを追加
- * - 重複リンク禁止
- * - Routerは接続ごとにIFを自動追加（最大8）
- * - 失敗時はnullを返す
+ * 引数に portAId / portBId を受け取り、ポートの linkedLinkId を更新する。
+ * 失敗時はnullを返す。
  */
 export function addLink(
   nodes: Map<NodeId, NetworkNode>,
   links: Map<LinkId, Link>,
   nodeAId: NodeId,
-  nodeBId: NodeId
+  portAId: PortId,
+  nodeBId: NodeId,
+  portBId: PortId
 ): { nodes: Map<NodeId, NetworkNode>; links: Map<LinkId, Link>; newLink: Link } | null {
   // 存在チェック
-  if (!nodes.has(nodeAId) || !nodes.has(nodeBId)) return null;
+  const nodeA = nodes.get(nodeAId);
+  const nodeB = nodes.get(nodeBId);
+  if (!nodeA || !nodeB) return null;
   // 自己ループ禁止
   if (nodeAId === nodeBId) return null;
 
-  // 重複リンク禁止
-  for (const link of links.values()) {
-    if (
-      (link.nodeA === nodeAId && link.nodeB === nodeBId) ||
-      (link.nodeA === nodeBId && link.nodeB === nodeAId)
-    ) {
-      return null;
-    }
-  }
+  // ポート存在チェック
+  const portA = nodeA.ports.find((p) => p.id === portAId);
+  const portB = nodeB.ports.find((p) => p.id === portBId);
+  if (!portA || !portB) return null;
 
-  const nodeA = nodes.get(nodeAId)!;
-  const nodeB = nodes.get(nodeBId)!;
-
-  // RouterのIF上限チェック（上限8 = 最大7リンク）
-  if (nodeA.type === "router" && nodeA.interfaces.length >= 8) return null;
-  if (nodeB.type === "router" && nodeB.interfaces.length >= 8) return null;
+  // ポート使用中チェック
+  if (portA.linkedLinkId !== null || portB.linkedLinkId !== null) return null;
 
   // リンク作成
   const newLink: Link = {
     id: generateLinkId(),
     nodeA: nodeAId,
+    portA: portAId,
     nodeB: nodeBId,
+    portB: portBId,
   };
 
   const newLinks = new Map(links);
   newLinks.set(newLink.id, newLink);
 
-  let newNodes = new Map(nodes);
+  // ポートのlinkedLinkIdを更新
+  const newNodes = new Map(nodes);
 
-  // RouterAにIF自動追加
-  if (nodeA.type === "router" && nodeA.interfaces.length < 8) {
-    const newIface: RouterInterface = {
-      name: `GigabitEthernet0/${nodeA.interfaces.length}`,
-      ipAddress: null,
-      subnetMask: null,
-      shutdown: true,
-    };
-    const updatedA: Router = {
-      ...nodeA,
-      interfaces: [...nodeA.interfaces, newIface],
-    };
-    newNodes.set(nodeAId, updatedA);
-  }
+  const updatedPortsA = nodeA.ports.map((p) =>
+    p.id === portAId ? { ...p, linkedLinkId: newLink.id } : p
+  );
+  newNodes.set(nodeAId, { ...nodeA, ports: updatedPortsA } as NetworkNode);
 
-  // RouterBにIF自動追加（newNodesから取り直す）
-  const currentB = newNodes.get(nodeBId)!;
-  if (currentB.type === "router" && currentB.interfaces.length < 8) {
-    const newIface: RouterInterface = {
-      name: `GigabitEthernet0/${currentB.interfaces.length}`,
-      ipAddress: null,
-      subnetMask: null,
-      shutdown: true,
-    };
-    const updatedB: Router = {
-      ...currentB,
-      interfaces: [...currentB.interfaces, newIface],
-    };
-    newNodes.set(nodeBId, updatedB);
-  }
+  const updatedNodeB = newNodes.get(nodeBId)!;
+  const updatedPortsB = updatedNodeB.ports.map((p) =>
+    p.id === portBId ? { ...p, linkedLinkId: newLink.id } : p
+  );
+  newNodes.set(nodeBId, { ...updatedNodeB, ports: updatedPortsB } as NetworkNode);
 
   return { nodes: newNodes, links: newLinks, newLink };
 }
 
-/** リンクを削除 */
+/**
+ * リンクを削除（両端ノードのポートのlinkedLinkIdもクリア）
+ */
 export function deleteLink(
+  nodes: Map<NodeId, NetworkNode>,
   links: Map<LinkId, Link>,
   linkId: LinkId
-): Map<LinkId, Link> {
+): { nodes: Map<NodeId, NetworkNode>; links: Map<LinkId, Link> } {
+  const link = links.get(linkId);
+  if (!link) return { nodes, links };
+
   const newLinks = new Map(links);
   newLinks.delete(linkId);
-  return newLinks;
+
+  const newNodes = new Map(nodes);
+
+  // ポートA のクリア
+  const nodeA = newNodes.get(link.nodeA);
+  if (nodeA) {
+    const updatedPorts = nodeA.ports.map((p) =>
+      p.linkedLinkId === linkId ? { ...p, linkedLinkId: null } : p
+    );
+    newNodes.set(link.nodeA, { ...nodeA, ports: updatedPorts } as NetworkNode);
+  }
+
+  // ポートB のクリア
+  const nodeB = newNodes.get(link.nodeB);
+  if (nodeB) {
+    const updatedPorts = nodeB.ports.map((p) =>
+      p.linkedLinkId === linkId ? { ...p, linkedLinkId: null } : p
+    );
+    newNodes.set(link.nodeB, { ...nodeB, ports: updatedPorts } as NetworkNode);
+  }
+
+  return { nodes: newNodes, links: newLinks };
 }
 
 /** ノードの座標を更新 */
@@ -259,6 +277,3 @@ export function getNodeLinks(
   }
   return result;
 }
-
-// countLinksFor を外部でも使えるようにエクスポート
-export { countLinksFor };

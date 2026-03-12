@@ -14,12 +14,12 @@ const NODE_COLORS: Record<NodeType, string> = {
   "dns-server": "#fab387",
 };
 
-// 接続点の相対座標
-export const CONNECTION_POINTS = [
-  { key: "top", dx: NODE_W / 2, dy: 0 },
-  { key: "right", dx: NODE_W, dy: NODE_H / 2 },
-  { key: "bottom", dx: NODE_W / 2, dy: NODE_H },
-  { key: "left", dx: 0, dy: NODE_H / 2 },
+// 接続点の相対座標（ポート表示用）
+const CONNECTION_POINT_POSITIONS = [
+  { dx: NODE_W / 2, dy: 0 },
+  { dx: NODE_W, dy: NODE_H / 2 },
+  { dx: NODE_W / 2, dy: NODE_H },
+  { dx: 0, dy: NODE_H / 2 },
 ] as const;
 
 /** ノードのIPアドレスを返す（Router は最初の設定済みIF） */
@@ -39,7 +39,7 @@ interface Props {
   onMouseUp: (e: React.MouseEvent<SVGGElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-  onConnectStart: (e: React.MouseEvent<SVGCircleElement>) => void;
+  onConnectStart: (e: React.MouseEvent<SVGCircleElement>, portId: PortId) => void;
   onContextMenu: (e: React.MouseEvent<SVGGElement>) => void;
 }
 
@@ -57,6 +57,9 @@ export default function NodeItem({
   const { x, y } = node.position;
   const color = NODE_COLORS[node.type];
   const ip = getNodeIp(node);
+
+  // 空きポートのみ接続点として表示（最大4箇所の位置にマッピング）
+  const freePorts = node.ports.filter((p) => p.linkedLinkId === null);
 
   return (
     <g
@@ -107,21 +110,25 @@ export default function NodeItem({
         </text>
       )}
 
-      {/* 接続点（ホバー時のみ表示） */}
+      {/* 接続点（ホバー時のみ、空きポート分だけ表示） */}
       {isHovered &&
-        CONNECTION_POINTS.map((cp) => (
-          <circle
-            key={cp.key}
-            cx={x + cp.dx}
-            cy={y + cp.dy}
-            r={6}
-            fill="#89b4fa"
-            stroke="#1e1e2e"
-            strokeWidth={2}
-            style={{ cursor: "crosshair" }}
-            onMouseDown={onConnectStart}
-          />
-        ))}
+        freePorts.map((port, i) => {
+          const cp =
+            CONNECTION_POINT_POSITIONS[i % CONNECTION_POINT_POSITIONS.length];
+          return (
+            <circle
+              key={port.id}
+              cx={x + cp.dx}
+              cy={y + cp.dy}
+              r={6}
+              fill="#89b4fa"
+              stroke="#1e1e2e"
+              strokeWidth={2}
+              style={{ cursor: "crosshair" }}
+              onMouseDown={(e) => onConnectStart(e, port.id)}
+            />
+          );
+        })}
     </g>
   );
 }

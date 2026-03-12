@@ -11,6 +11,7 @@ interface Props {
   nodes: Map<NodeId, NetworkNode>;
   links: Map<LinkId, Link>;
   drag: DragState;
+  linkCreation: LinkCreationState;
   simulation: SimulationState;
   selectedNodeId: NodeId | null;
   dispatch: React.Dispatch<Action>;
@@ -20,6 +21,7 @@ export default function Canvas({
   nodes,
   links,
   drag,
+  linkCreation,
   simulation,
   selectedNodeId,
   dispatch,
@@ -28,6 +30,8 @@ export default function Canvas({
   const [hoveredNodeId, setHoveredNodeId] = useState<NodeId | null>(null);
   const dragRef = useRef(drag);
   dragRef.current = drag;
+  const linkCreationRef = useRef(linkCreation);
+  linkCreationRef.current = linkCreation;
 
   /** マウス座標をSVG座標に変換 */
   const toSvgPoint = useCallback(
@@ -55,18 +59,21 @@ export default function Canvas({
             },
           },
         });
-      } else if (d.kind === "creating-link") {
+      }
+      // リンク作成中の座標更新
+      const lc = linkCreationRef.current;
+      if (lc.step === "source-selected") {
         const pos = toSvgPoint(e.clientX, e.clientY);
         dispatch({
-          type: "SET_DRAG",
-          payload: { ...d, currentPosition: pos },
+          type: "SET_LINK_CREATION",
+          payload: { ...lc, currentPosition: pos },
         });
       }
     };
 
     const handleMouseUp = () => {
       const d = dragRef.current;
-      if (d.kind === "moving-node" || d.kind === "creating-link") {
+      if (d.kind === "moving-node") {
         dispatch({ type: "CLEAR_DRAG" });
       }
     };
@@ -94,11 +101,12 @@ export default function Canvas({
     });
   };
 
-  // SVG背景クリック → 選択解除
+  // SVG背景クリック → 選択解除 & リンク作成キャンセル
   const handleSvgMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     if (e.button !== 0) return;
     if (e.target === svgRef.current) {
       dispatch({ type: "DESELECT_NODE" });
+      dispatch({ type: "SET_LINK_CREATION", payload: { step: "idle" } });
     }
   };
 
@@ -127,35 +135,63 @@ export default function Canvas({
     });
   };
 
-  // 接続点mousedown → リンク作成開始
+  // 接続点mousedown → リンク作成開始（source-selected ステップ）
   const handleConnectStart = (
     e: React.MouseEvent<SVGCircleElement>,
-    sourceNodeId: NodeId
+    sourceNodeId: NodeId,
+    sourcePortId: PortId
   ) => {
     e.stopPropagation();
     const pos = toSvgPoint(e.clientX, e.clientY);
     dispatch({
-      type: "SET_DRAG",
+      type: "SET_LINK_CREATION",
       payload: {
-        kind: "creating-link",
+        step: "source-selected",
         sourceNodeId,
+        sourcePortId,
         currentPosition: pos,
       },
     });
   };
 
-  // ノードのmouseup → リンク作成完了
+  // ノードのmouseup → リンク作成: target-node-selected ステップへ
   const handleNodeMouseUp = (
     e: React.MouseEvent<SVGGElement>,
     nodeId: NodeId
   ) => {
-    const d = dragRef.current;
-    if (d.kind === "creating-link" && d.sourceNodeId !== nodeId) {
-      dispatch({
-        type: "ADD_LINK",
-        payload: { nodeAId: d.sourceNodeId, nodeBId: nodeId },
-      });
-      dispatch({ type: "CLEAR_DRAG" });
+    const lc = linkCreationRef.current;
+    if (lc.step === "source-selected" && lc.sourceNodeId !== nodeId) {
+      // 対象ノードの空きポートを取得
+      const targetNode = nodes.get(nodeId);
+      if (!targetNode) return;
+      const availablePorts = targetNode.ports.filter(
+        (p) => p.linkedLinkId === null
+      );
+      if (availablePorts.length === 0) return;
+      // ポートが1つのみなら即リンク作成、複数なら選択ステップへ
+      if (availablePorts.length === 1) {
+        dispatch({
+          type: "ADD_LINK",
+          payload: {
+            nodeAId: lc.sourceNodeId,
+            portAId: lc.sourcePortId,
+            nodeBId: nodeId,
+            portBId: availablePorts[0].id,
+          },
+        });
+        dispatch({ type: "SET_LINK_CREATION", payload: { step: "idle" } });
+      } else {
+        dispatch({
+          type: "SET_LINK_CREATION",
+          payload: {
+            step: "target-node-selected",
+            sourceNodeId: lc.sourceNodeId,
+            sourcePortId: lc.sourcePortId,
+            targetNodeId: nodeId,
+            availablePorts,
+          },
+        });
+      }
     }
   };
 
@@ -199,8 +235,8 @@ export default function Canvas({
 
   // リンク作成中のプレビューライン
   const renderDragLine = () => {
-    if (drag.kind !== "creating-link") return null;
-    const src = nodes.get(drag.sourceNodeId);
+    if (linkCreation.step !== "source-selected") return null;
+    const src = nodes.get(linkCreation.sourceNodeId);
     if (!src) return null;
     const sx = src.position.x + NODE_W / 2;
     const sy = src.position.y + NODE_H / 2;
@@ -208,8 +244,8 @@ export default function Canvas({
       <line
         x1={sx}
         y1={sy}
-        x2={drag.currentPosition.x}
-        y2={drag.currentPosition.y}
+        x2={linkCreation.currentPosition.x}
+        y2={linkCreation.currentPosition.y}
         stroke="#89b4fa"
         strokeWidth={2}
         strokeDasharray="6 3"
@@ -269,7 +305,7 @@ export default function Canvas({
           onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
           onMouseEnter={() => setHoveredNodeId(node.id)}
           onMouseLeave={() => setHoveredNodeId(null)}
-          onConnectStart={(e) => handleConnectStart(e, node.id)}
+          onConnectStart={(e, portId) => handleConnectStart(e, node.id, portId)}
           onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
         />
       ))}
