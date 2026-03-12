@@ -48,8 +48,8 @@ export default function RouterDetail({ node, nodes, links, dispatch }: Props) {
       <div className={styles.section}>
         <div className={styles.sectionTitle}>インターフェース</div>
         {node.interfaces.map((iface) => (
-          <div key={iface.name} className={styles.ifaceItem}>
-            <span className={styles.ifaceName}>{iface.name}</span>
+          <div key={iface.portName} className={styles.ifaceItem}>
+            <span className={styles.ifaceName}>{iface.portName}</span>
             <span className={styles.ifaceIp}>
               {iface.ipAddress
                 ? `${iface.ipAddress} / ${iface.subnetMask}`

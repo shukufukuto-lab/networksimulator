@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer, useRef, useCallback, useEffect } from "react";
+import Link from "next/link";
 import Palette from "@/components/Palette";
 import Canvas from "@/components/Canvas";
 import ContextMenu from "@/components/ContextMenu";
@@ -32,11 +33,11 @@ import styles from "./SimulatorApp.module.css";
 // パレットアイテム（固定）
 // ----------------------------------------------------------------
 const PALETTE_ITEMS: PaletteItem[] = [
-  { nodeType: "router", label: "Router", icon: "RTR" },
-  { nodeType: "switch", label: "Switch", icon: "SW" },
-  { nodeType: "pc", label: "PC", icon: "PC" },
-  { nodeType: "server", label: "Server", icon: "SRV" },
-  { nodeType: "dns-server", label: "DNS", icon: "DNS" },
+  { nodeType: "router", label: "Router", iconName: "MdRouter" },
+  { nodeType: "switch", label: "Switch", iconName: "MdDeviceHub" },
+  { nodeType: "pc", label: "PC", iconName: "MdComputer" },
+  { nodeType: "server", label: "Server", iconName: "MdStorage" },
+  { nodeType: "dns-server", label: "DNS", iconName: "MdPublic" },
 ];
 
 // ----------------------------------------------------------------
@@ -53,10 +54,19 @@ export type Action =
       payload: { nodeId: NodeId; position: { x: number; y: number } };
     }
   | { type: "UPDATE_NODE"; payload: { node: NetworkNode } }
-  | { type: "ADD_LINK"; payload: { nodeAId: NodeId; nodeBId: NodeId } }
+  | {
+      type: "ADD_LINK";
+      payload: {
+        nodeAId: NodeId;
+        portAId: PortId;
+        nodeBId: NodeId;
+        portBId: PortId;
+      };
+    }
   | { type: "DELETE_LINK"; payload: { linkId: LinkId } }
   | { type: "SET_DRAG"; payload: DragState }
   | { type: "CLEAR_DRAG" }
+  | { type: "SET_LINK_CREATION"; payload: LinkCreationState }
   | {
       type: "SHOW_CONTEXT_MENU";
       payload: Extract<ContextMenu, { visible: true }>;
@@ -79,6 +89,7 @@ const initialState: AppState = {
   },
   simulation: INITIAL_SIMULATION_STATE,
   drag: { kind: "none" },
+  linkCreation: { step: "idle" },
   contextMenu: { visible: false },
   selectedNodeId: null,
   palette: PALETTE_ITEMS,
@@ -131,20 +142,27 @@ function reducer(state: AppState, action: Action): AppState {
         state.topology.nodes,
         state.topology.links,
         action.payload.nodeAId,
-        action.payload.nodeBId
+        action.payload.portAId,
+        action.payload.nodeBId,
+        action.payload.portBId
       );
       if (!result) return state;
       return {
         ...state,
         topology: { nodes: result.nodes, links: result.links },
         simulation: INITIAL_SIMULATION_STATE,
+        linkCreation: { step: "idle" },
       };
     }
     case "DELETE_LINK": {
-      const links = deleteLink(state.topology.links, action.payload.linkId);
+      const { nodes, links } = deleteLink(
+        state.topology.nodes,
+        state.topology.links,
+        action.payload.linkId
+      );
       return {
         ...state,
-        topology: { ...state.topology, links },
+        topology: { nodes, links },
         contextMenu: { visible: false },
         simulation: INITIAL_SIMULATION_STATE,
       };
@@ -153,6 +171,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, drag: action.payload };
     case "CLEAR_DRAG":
       return { ...state, drag: { kind: "none" } };
+    case "SET_LINK_CREATION":
+      return { ...state, linkCreation: action.payload };
     case "SHOW_CONTEXT_MENU":
       return { ...state, contextMenu: action.payload };
     case "HIDE_CONTEXT_MENU":
@@ -200,6 +220,7 @@ function reducer(state: AppState, action: Action): AppState {
         selectedNodeId: null,
         contextMenu: { visible: false },
         drag: { kind: "none" },
+        linkCreation: { step: "idle" },
       };
     }
   }
@@ -246,7 +267,7 @@ export default function SimulatorApp() {
     <div className={styles.app}>
       {/* ヘッダー */}
       <header className={styles.header}>
-        <span className={styles.title}>Network Simulator</span>
+        <Link href="/" className={styles.titleLink}>Network Simulator</Link>
         <div className={styles.headerActions}>
           <button className={styles.headerBtn} onClick={handleSave}>
             保存
@@ -275,6 +296,7 @@ export default function SimulatorApp() {
             nodes={state.topology.nodes}
             links={state.topology.links}
             drag={state.drag}
+            linkCreation={state.linkCreation}
             simulation={state.simulation}
             selectedNodeId={state.selectedNodeId}
             dispatch={dispatch}
