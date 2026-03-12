@@ -1,0 +1,96 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  background: #181825;
+  border-top: 1px solid #313244;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.idle {
+  background: #313244;
+  color: #6c7086;
+}
+
+.running {
+  background: rgba(137, 180, 250, 0.2);
+  color: #89b4fa;
+}
+
+.paused {
+  background: rgba(249, 226, 175, 0.2);
+  color: #f9e2af;
+}
+
+.finished {
+  background: rgba(166, 227, 161, 0.2);
+  color: #a6e3a1;
+}
+
+.stepDesc {
+  font-size: 12px;
+  color: #a6adc8;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn {
+  padding: 5px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+
+.next {
+  background: #89b4fa;
+  color: #1e1e2e;
+}
+
+.next:hover {
+  background: #b4d0ff;
+}
+
+.reset {
+  background: transparent;
+  color: #f38ba8;
+  border-color: #f38ba8;
+}
+
+.reset:hover {
+  background: rgba(243, 139, 168, 0.15);
+}
+
+.hint {
+  font-size: 11px;
+  color: #45475a;
+}

@@ -1,0 +1,208 @@
+.panel {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #89b4fa;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #313244;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6c7086;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.label {
+  font-size: 11px;
+  color: #a6adc8;
+}
+
+.input {
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  color: #cdd6f4;
+  padding: 5px 8px;
+  width: 100%;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: #89b4fa;
+}
+
+.textarea {
+  background: #1e1e2e;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  color: #a6e3a1;
+  padding: 6px 8px;
+  width: 100%;
+  font-size: 11px;
+  font-family: monospace;
+  resize: vertical;
+  min-height: 100px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.textarea:focus {
+  border-color: #89b4fa;
+}
+
+.btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.btnPrimary {
+  background: #89b4fa;
+  color: #1e1e2e;
+  font-weight: 600;
+}
+
+.btnPrimary:hover {
+  background: #b4d0ff;
+}
+
+.btnSecondary {
+  background: #313244;
+  color: #cdd6f4;
+  border-color: #45475a;
+}
+
+.btnSecondary:hover {
+  background: #45475a;
+}
+
+.btnDanger {
+  background: transparent;
+  color: #f38ba8;
+  border-color: #f38ba8;
+}
+
+.btnDanger:hover {
+  background: rgba(243, 139, 168, 0.15);
+}
+
+.btnRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ifaceItem {
+  background: #313244;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.ifaceName {
+  color: #89b4fa;
+  font-weight: 600;
+}
+
+.ifaceIp {
+  color: #a6adc8;
+  margin-left: 6px;
+}
+
+.routeItem {
+  background: #313244;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #a6e3a1;
+}
+
+.recordItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #313244;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.recordText {
+  flex: 1;
+  font-size: 11px;
+  font-family: monospace;
+  color: #a6adc8;
+}
+
+.pingResult {
+  background: #1e1e2e;
+  border: 1px solid #313244;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.pingSuccess {
+  color: #a6e3a1;
+}
+
+.pingFail {
+  color: #f38ba8;
+}
+
+.addRow {
+  display: flex;
+  gap: 6px;
+}
+
+.addInput {
+  flex: 1;
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  color: #cdd6f4;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.addInput:focus {
+  border-color: #89b4fa;
+}
+
+.vlanItem {
+  background: #313244;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #f9e2af;
+}

@@ -1,0 +1,31 @@
+.menu {
+  position: fixed;
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 100px;
+  list-style: none;
+  z-index: 1000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.item {
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #cdd6f4;
+  transition: background 0.1s;
+}
+
+.item:hover {
+  background: #45475a;
+}
+
+.danger {
+  color: #f38ba8;
+}
+
+.danger:hover {
+  background: rgba(243, 139, 168, 0.15);
+}
