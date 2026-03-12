@@ -1,0 +1,37 @@
+name: Deploy to Amazon S3
+
+on:
+  push:
+    branches:
+      - main # mainブランチにpushされたら発火
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1 # バケットのリージョンに合わせて変更
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./out s3://${{ secrets.AWS_S3_BUCKET_NAME }} --delete
