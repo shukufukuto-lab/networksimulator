@@ -34,7 +34,7 @@ export default function Canvas({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<NodeId | null>(null);
-  // ソースポート選択待ち（ノードをクリックしたとき表示）
+  // ノードクリック時にソースポート選択を表示するためのstate
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<NodeId | null>(null);
 
   const dragRef = useRef(drag);
@@ -64,29 +64,20 @@ export default function Canvas({
           type: "MOVE_NODE",
           payload: {
             nodeId: d.nodeId,
-            position: {
-              x: pos.x - d.offset.x,
-              y: pos.y - d.offset.y,
-            },
+            position: { x: pos.x - d.offset.x, y: pos.y - d.offset.y },
           },
         });
       }
-      // リンク作成中の座標更新
       const lc = linkCreationRef.current;
       if (lc.step === "source-selected") {
         const pos = toSvgPoint(e.clientX, e.clientY);
-        dispatch({
-          type: "SET_LINK_CREATION",
-          payload: { ...lc, currentPosition: pos },
-        });
+        dispatch({ type: "SET_LINK_CREATION", payload: { ...lc, currentPosition: pos } });
       }
     };
 
     const handleMouseUp = () => {
       const d = dragRef.current;
-      if (d.kind === "moving-node") {
-        dispatch({ type: "CLEAR_DRAG" });
-      }
+      if (d.kind === "moving-node") dispatch({ type: "CLEAR_DRAG" });
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -105,14 +96,11 @@ export default function Canvas({
     const pos = toSvgPoint(e.clientX, e.clientY);
     dispatch({
       type: "ADD_NODE",
-      payload: {
-        nodeType,
-        position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 },
-      },
+      payload: { nodeType, position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 } },
     });
   };
 
-  // SVG背景クリック → 選択解除 & リンク作成キャンセル
+  // SVG背景クリック → 選択解除 & キャンセル
   const handleSvgMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     if (e.button !== 0) return;
     if (e.target === svgRef.current) {
@@ -123,7 +111,7 @@ export default function Canvas({
     }
   };
 
-  // ノードのmousedown → ノード移動開始
+  // ノードmousedown → 移動開始
   const handleNodeMouseDown = (
     e: React.MouseEvent<SVGRectElement>,
     nodeId: NodeId
@@ -143,43 +131,20 @@ export default function Canvas({
       payload: {
         kind: "moving-node",
         nodeId,
-        offset: {
-          x: pos.x - node.position.x,
-          y: pos.y - node.position.y,
-        },
+        offset: { x: pos.x - node.position.x, y: pos.y - node.position.y },
         currentPosition: pos,
       },
     });
   };
 
-  // 接続点mousedown → リンク作成開始（source-selected ステップ）
-  const handleConnectStart = (
-    e: React.MouseEvent<SVGCircleElement>,
-    sourceNodeId: NodeId,
-    sourcePortId: PortId
-  ) => {
-    e.stopPropagation();
-    const pos = toSvgPoint(e.clientX, e.clientY);
-    dispatch({
-      type: "SET_LINK_CREATION",
-      payload: {
-        step: "source-selected",
-        sourceNodeId,
-        sourcePortId,
-        currentPosition: pos,
-      },
-    });
-    setPendingSourceNodeId(null);
-  };
-
-  // ノードのmouseup → クリック判定 or リンク作成ターゲット選択
+  // ノードmouseup → クリック判定 or リンク作成ターゲット選択
   const handleNodeMouseUp = (
     e: React.MouseEvent<SVGGElement>,
     nodeId: NodeId
   ) => {
     const lc = linkCreationRef.current;
 
-    // idle状態でクリック（小移動）→ ソースポート選択表示
+    // idle状態でクリック（移動量 < 8px）→ ソースポート選択ポップアップ表示
     if (lc.step === "idle" && mouseDownPosRef.current) {
       const currentPos = toSvgPoint(e.clientX, e.clientY);
       const dx = currentPos.x - mouseDownPosRef.current.x;
@@ -191,15 +156,11 @@ export default function Canvas({
     }
 
     if (lc.step !== "source-selected") return;
-    // 自己ループは無視
     if (lc.sourceNodeId === nodeId) return;
 
-    // 接続先ノードの空きポートを取得
     const targetNode = nodes.get(nodeId);
     if (!targetNode) return;
-    const availablePorts = targetNode.ports.filter(
-      (p) => p.linkedLinkId === null
-    );
+    const availablePorts = targetNode.ports.filter((p) => p.linkedLinkId === null);
     if (availablePorts.length === 0) return;
 
     dispatch({
@@ -223,12 +184,7 @@ export default function Canvas({
     e.stopPropagation();
     dispatch({
       type: "SHOW_CONTEXT_MENU",
-      payload: {
-        visible: true,
-        targetType: "node",
-        targetId: nodeId,
-        position: { x: e.clientX, y: e.clientY },
-      },
+      payload: { visible: true, targetType: "node", targetId: nodeId, position: { x: e.clientX, y: e.clientY } },
     });
   };
 
@@ -241,12 +197,7 @@ export default function Canvas({
     e.stopPropagation();
     dispatch({
       type: "SHOW_CONTEXT_MENU",
-      payload: {
-        visible: true,
-        targetType: "link",
-        targetId: linkId,
-        position: { x: e.clientX, y: e.clientY },
-      },
+      payload: { visible: true, targetType: "link", targetId: linkId, position: { x: e.clientX, y: e.clientY } },
     });
   };
 
@@ -256,7 +207,7 @@ export default function Canvas({
     setPendingSourceNodeId(null);
   };
 
-  // リンクエンドポイントドラッグ → 再接続（リンク削除してリンク作成開始）
+  // リンクエンドポイントドラッグ → 再接続
   const handleEndpointMouseDown = (
     e: React.MouseEvent<SVGCircleElement>,
     link: Link,
@@ -269,12 +220,7 @@ export default function Canvas({
     const sourcePortId = isEndpointA ? link.portB : link.portA;
     dispatch({
       type: "SET_LINK_CREATION",
-      payload: {
-        step: "source-selected",
-        sourceNodeId,
-        sourcePortId,
-        currentPosition: pos,
-      },
+      payload: { step: "source-selected", sourceNodeId, sourcePortId, currentPosition: pos },
     });
   };
 
@@ -285,12 +231,10 @@ export default function Canvas({
     if (linkCreation.step !== "source-selected") return null;
     const src = nodes.get(linkCreation.sourceNodeId);
     if (!src) return null;
-    const sx = src.position.x + NODE_W / 2;
-    const sy = src.position.y + NODE_H / 2;
     return (
       <line
-        x1={sx}
-        y1={sy}
+        x1={src.position.x + NODE_W / 2}
+        y1={src.position.y + NODE_H / 2}
         x2={linkCreation.currentPosition.x}
         y2={linkCreation.currentPosition.y}
         stroke="#89b4fa"
@@ -301,7 +245,7 @@ export default function Canvas({
     );
   };
 
-  // ソースポート選択ドロップダウン（ノードクリック時）
+  // ソースポート選択ポップアップ（ノードクリック時）
   const renderSourcePortSelector = () => {
     if (!pendingSourceNodeId) return null;
     const node = nodes.get(pendingSourceNodeId);
@@ -315,17 +259,16 @@ export default function Canvas({
         <PortSelector
           ports={availablePorts}
           onSelect={(portId) => {
-            const pos = {
-              x: node.position.x + NODE_W / 2,
-              y: node.position.y + NODE_H / 2,
-            };
             dispatch({
               type: "SET_LINK_CREATION",
               payload: {
                 step: "source-selected",
                 sourceNodeId: pendingSourceNodeId,
                 sourcePortId: portId,
-                currentPosition: pos,
+                currentPosition: {
+                  x: node.position.x + NODE_W / 2,
+                  y: node.position.y + NODE_H / 2,
+                },
               },
             });
             setPendingSourceNodeId(null);
@@ -336,7 +279,7 @@ export default function Canvas({
     );
   };
 
-  // パケットアニメーション（シミュレーションモードON時）
+  // パケットアニメーション
   const renderPacketAnimation = () => {
     if (simulationMode !== "on") return null;
     if (simulation.status !== "paused") return null;
@@ -348,14 +291,8 @@ export default function Canvas({
     return (
       <PacketAnimation
         step={currentStep}
-        fromPosition={{
-          x: fromNode.position.x + NODE_W / 2,
-          y: fromNode.position.y + NODE_H / 2,
-        }}
-        toPosition={{
-          x: toNode.position.x + NODE_W / 2,
-          y: toNode.position.y + NODE_H / 2,
-        }}
+        fromPosition={{ x: fromNode.position.x + NODE_W / 2, y: fromNode.position.y + NODE_H / 2 }}
+        toPosition={{ x: toNode.position.x + NODE_W / 2, y: toNode.position.y + NODE_H / 2 }}
         onComplete={() => {}}
       />
     );
@@ -369,20 +306,9 @@ export default function Canvas({
       onDragOver={(e) => e.preventDefault()}
       onMouseDown={handleSvgMouseDown}
     >
-      {/* グリッド背景 */}
       <defs>
-        <pattern
-          id="grid"
-          width={24}
-          height={24}
-          patternUnits="userSpaceOnUse"
-        >
-          <path
-            d="M 24 0 L 0 0 0 24"
-            fill="none"
-            stroke="#313244"
-            strokeWidth={0.5}
-          />
+        <pattern id="grid" width={24} height={24} patternUnits="userSpaceOnUse">
+          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#313244" strokeWidth={0.5} />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#grid)" />
@@ -401,37 +327,27 @@ export default function Canvas({
         />
       ))}
 
-      {/* 作成中リンクのプレビュー */}
       {renderDragLine()}
 
       {/* ノード */}
-      {Array.from(nodes.values()).map((node) => {
-        const portsInteractive =
-          hoveredNodeId === node.id &&
-          (linkCreation.step === "idle" ||
-            (linkCreation.step === "source-selected" &&
-              linkCreation.sourceNodeId === node.id));
-        return (
-          <NodeItem
-            key={node.id}
-            node={node}
-            isSelected={selectedNodeId === node.id}
-            isHovered={hoveredNodeId === node.id}
-            portsInteractive={portsInteractive}
-            onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-            onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-            onMouseEnter={() => setHoveredNodeId(node.id)}
-            onMouseLeave={() => setHoveredNodeId(null)}
-            onConnectStart={(e, portId) => handleConnectStart(e, node.id, portId)}
-            onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
-          />
-        );
-      })}
+      {Array.from(nodes.values()).map((node) => (
+        <NodeItem
+          key={node.id}
+          node={node}
+          isSelected={selectedNodeId === node.id}
+          isHovered={hoveredNodeId === node.id}
+          onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+          onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+          onMouseEnter={() => setHoveredNodeId(node.id)}
+          onMouseLeave={() => setHoveredNodeId(null)}
+          onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
+        />
+      ))}
 
-      {/* ソースポート選択ドロップダウン（ノードクリック時） */}
+      {/* ソースポート選択 */}
       {renderSourcePortSelector()}
 
-      {/* ターゲットポート選択ドロップダウン（target-node-selected時） */}
+      {/* ターゲットポート選択 */}
       {linkCreation.step === "target-node-selected" && (() => {
         const targetNode = nodes.get(linkCreation.targetNodeId);
         if (!targetNode) return null;
@@ -453,15 +369,12 @@ export default function Canvas({
                 });
                 dispatch({ type: "SET_LINK_CREATION", payload: { step: "idle" } });
               }}
-              onCancel={() =>
-                dispatch({ type: "SET_LINK_CREATION", payload: { step: "idle" } })
-              }
+              onCancel={() => dispatch({ type: "SET_LINK_CREATION", payload: { step: "idle" } })}
             />
           </foreignObject>
         );
       })()}
 
-      {/* パケットアニメーション */}
       {renderPacketAnimation()}
     </svg>
   );

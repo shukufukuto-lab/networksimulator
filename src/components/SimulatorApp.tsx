@@ -1,7 +1,6 @@
 "use client";
 
 import { useReducer, useRef, useCallback, useEffect } from "react";
-import Link from "next/link";
 import Palette from "@/components/Palette";
 import Canvas from "@/components/Canvas";
 import ContextMenu from "@/components/ContextMenu";
@@ -321,7 +320,6 @@ export default function SimulatorApp() {
     <div className={styles.app}>
       {/* ヘッダー */}
       <header className={styles.header}>
-        <Link href="/" className={styles.titleLink}>Network Simulator</Link>
         <div className={styles.headerActions}>
           <button
             className={`${styles.headerBtn} ${state.simulationMode === "on" ? styles.modeOn : ""}`}

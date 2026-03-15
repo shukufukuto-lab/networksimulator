@@ -12,7 +12,8 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npx tsc --noEmit 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npx tsc --noEmit 2>&1; echo \"Exit code: $?\")",
-      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npm run build 2>&1 | tail -20)"
+      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npm run build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\fukut\\\\OneDrive\\\\デスクトップ\\\\PlayClavis\\\\Develop\\\\Network\\\\network-simulator\" && npm run build 2>&1)"
     ]
   }
 }
