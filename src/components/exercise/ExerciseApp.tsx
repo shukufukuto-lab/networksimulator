@@ -1,7 +1,6 @@
 "use client";
 
 import { useReducer } from "react";
-import Link from "next/link";
 import ExercisePalette from "@/components/exercise/ExercisePalette";
 import ExerciseCanvas from "@/components/exercise/ExerciseCanvas";
 import ExerciseBar from "@/components/exercise/ExerciseBar";
@@ -279,11 +278,11 @@ export default function ExerciseApp({ exerciseId }: Props) {
   const genericDispatch = dispatch as React.Dispatch<{ type: string; [key: string]: unknown }>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#1e1e2e" }}>
-      <header style={{ padding: "12px 16px", background: "#181825", borderBottom: "1px solid #313244" }}>
-        <Link href="/" style={{ color: "#cdd6f4", fontWeight: 700, textDecoration: "none", cursor: "pointer" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#1e1e2e", overflow: "hidden" }}>
+      <header style={{ padding: "10px 16px", background: "#181825", borderBottom: "1px solid #313244", flexShrink: 0 }}>
+        <span style={{ color: "#cdd6f4", fontWeight: 700 }}>
           演習 {exerciseId}: {exerciseId === 1 ? "VLAN制御" : "ルーティング設定"}
-        </Link>
+        </span>
       </header>
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
