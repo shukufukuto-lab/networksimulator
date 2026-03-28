@@ -259,11 +259,29 @@ function reducer(state: AppState, action: Action): AppState {
 }
 
 // ----------------------------------------------------------------
+// PCフォーム状態のスナップショット型（PcDetailと共有）
+// ----------------------------------------------------------------
+export type PcFormSnapshot = {
+  pingDest: string;
+  pingResult: PingResult | null;
+  webUrl: string;
+  webResult: WebResult | null;
+};
+
+// ----------------------------------------------------------------
 // ルートコンポーネント
 // ----------------------------------------------------------------
 export default function SimulatorApp() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pcSnapshotsRef = useRef<Map<NodeId, PcFormSnapshot>>(new Map());
+  const getPcSnapshot = useCallback(
+    (id: NodeId) => pcSnapshotsRef.current.get(id) ?? null,
+    []
+  );
+  const savePcSnapshot = useCallback((id: NodeId, snapshot: PcFormSnapshot) => {
+    pcSnapshotsRef.current.set(id, snapshot);
+  }, []);
 
   // グローバルクリックでコンテキストメニューを閉じる
   useEffect(() => {
@@ -390,6 +408,8 @@ export default function SimulatorApp() {
               nodes={state.topology.nodes}
               links={state.topology.links}
               dispatch={dispatch}
+              getSnapshot={getPcSnapshot}
+              saveSnapshot={savePcSnapshot}
             />
           ) : selectedNode.type === "server" ? (
             <ServerDetail node={selectedNode} dispatch={dispatch} />

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { computePing } from "@/domain/routing";
 import { computeWeb } from "@/domain/routing";
-import type { Action } from "@/components/SimulatorApp";
+import type { Action, PcFormSnapshot } from "@/components/SimulatorApp";
 import BrowserModal from "@/components/modals/BrowserModal";
 import styles from "./Detail.module.css";
 
@@ -12,14 +12,27 @@ interface Props {
   nodes: Map<NodeId, NetworkNode>;
   links: Map<LinkId, Link>;
   dispatch: React.Dispatch<Action>;
+  getSnapshot: (id: NodeId) => PcFormSnapshot | null;
+  saveSnapshot: (id: NodeId, snapshot: PcFormSnapshot) => void;
 }
 
-export default function PcDetail({ node, nodes, links, dispatch }: Props) {
-  const [pingDest, setPingDest] = useState("");
-  const [pingResult, setPingResult] = useState<PingResult | null>(null);
-  const [webUrl, setWebUrl] = useState("");
-  const [webResult, setWebResult] = useState<WebResult | null>(null);
+export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, saveSnapshot }: Props) {
+  const snapshot = getSnapshot(node.id);
+  const [pingDest, setPingDest] = useState(snapshot?.pingDest ?? "");
+  const [pingResult, setPingResult] = useState<PingResult | null>(snapshot?.pingResult ?? null);
+  const [webUrl, setWebUrl] = useState(snapshot?.webUrl ?? "");
+  const [webResult, setWebResult] = useState<WebResult | null>(snapshot?.webResult ?? null);
   const [showBrowser, setShowBrowser] = useState(false);
+
+  // アンマウント時にフォーム状態を保存する
+  const stateRef = useRef({ pingDest, pingResult, webUrl, webResult });
+  stateRef.current = { pingDest, pingResult, webUrl, webResult };
+  useEffect(() => {
+    const nodeId = node.id;
+    return () => {
+      saveSnapshot(nodeId, stateRef.current);
+    };
+  }, [node.id, saveSnapshot]);
 
   const updateNode = (patch: Partial<PC>) => {
     dispatch({ type: "UPDATE_NODE", payload: { node: { ...node, ...patch } } });
