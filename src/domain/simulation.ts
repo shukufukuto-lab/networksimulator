@@ -3,7 +3,7 @@
 // ホップ列→SimulationStep変換・SimulationState生成
 // =============================================================
 
-import { computePing, computeWeb } from "@/domain/routing";
+import { computePing, computeWeb, computeRoute } from "@/domain/routing";
 
 // -------------------------------------------------------------
 // 内部ユーティリティ
@@ -133,7 +133,8 @@ export function startWebSimulation(
 ): SimulationState {
   const webResult = computeWeb(nodes, links, request);
 
-  if (!webResult.success || webResult.hops.length === 0) {
+  const srcNode = nodes.get(request.sourceNodeId);
+  if (!srcNode || srcNode.type !== "pc" || !srcNode.dnsServer) {
     return {
       status: "finished",
       currentRequest: request,
@@ -142,10 +143,36 @@ export function startWebSimulation(
     };
   }
 
-  // Web通信ではhopsにDNSとHTTPが混在する。
-  // 簡易的にすべてのホップを "web" 通信タイプとしてステップ化する。
-  // より詳細なフェーズ分割は将来対応。
-  const steps = buildSteps(nodes, links, webResult.hops, "web");
+  // DNS フェーズ: PC → DNSサーバ（往路・復路）
+  const dnsRoute = computeRoute(nodes, links, request.sourceNodeId, srcNode.dnsServer);
+  const dnsSteps = dnsRoute.success
+    ? buildSteps(nodes, links, dnsRoute.hops, "dns")
+    : [];
+
+  // HTTP フェーズ: PC → サーバ（往路・復路）
+  let httpSteps: SimulationStep[] = [];
+  if (webResult.dnsResult.success) {
+    const httpRoute = computeRoute(
+      nodes,
+      links,
+      request.sourceNodeId,
+      webResult.dnsResult.resolvedIp
+    );
+    if (httpRoute.success) {
+      httpSteps = buildSteps(nodes, links, httpRoute.hops, "web");
+    }
+  }
+
+  const steps = [...dnsSteps, ...httpSteps];
+
+  if (steps.length === 0) {
+    return {
+      status: "finished",
+      currentRequest: request,
+      steps: [],
+      currentStepIndex: 0,
+    };
+  }
 
   return {
     status: "paused",
