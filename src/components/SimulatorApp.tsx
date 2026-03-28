@@ -410,6 +410,8 @@ export default function SimulatorApp() {
               dispatch={dispatch}
               getSnapshot={getPcSnapshot}
               saveSnapshot={savePcSnapshot}
+              simulation={state.simulation}
+              simulationMode={state.simulationMode}
             />
           ) : selectedNode.type === "server" ? (
             <ServerDetail node={selectedNode} dispatch={dispatch} />

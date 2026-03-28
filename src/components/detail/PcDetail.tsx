@@ -14,15 +14,21 @@ interface Props {
   dispatch: React.Dispatch<Action>;
   getSnapshot: (id: NodeId) => PcFormSnapshot | null;
   saveSnapshot: (id: NodeId, snapshot: PcFormSnapshot) => void;
+  simulation: SimulationState;
+  simulationMode: SimulationMode;
 }
 
-export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, saveSnapshot }: Props) {
+export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, saveSnapshot, simulation, simulationMode }: Props) {
   const snapshot = getSnapshot(node.id);
   const [pingDest, setPingDest] = useState(snapshot?.pingDest ?? "");
   const [pingResult, setPingResult] = useState<PingResult | null>(snapshot?.pingResult ?? null);
   const [webUrl, setWebUrl] = useState(snapshot?.webUrl ?? "");
   const [webResult, setWebResult] = useState<WebResult | null>(snapshot?.webResult ?? null);
   const [showBrowser, setShowBrowser] = useState(false);
+
+  // ステップ実行ON・成功時に保留する結果
+  const [pendingPingResult, setPendingPingResult] = useState<PingResult | null>(null);
+  const [pendingWebResult, setPendingWebResult] = useState<WebResult | null>(null);
 
   // アンマウント時にフォーム状態を保存する
   const stateRef = useRef({ pingDest, pingResult, webUrl, webResult });
@@ -33,6 +39,21 @@ export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, sa
       saveSnapshot(nodeId, stateRef.current);
     };
   }, [node.id, saveSnapshot]);
+
+  // シミュレーション完了時に保留中の結果を表示する
+  useEffect(() => {
+    if (simulation.status !== "finished") return;
+    if (pendingPingResult) {
+      setPingResult(pendingPingResult);
+      setPendingPingResult(null);
+    }
+    if (pendingWebResult) {
+      setWebResult(pendingWebResult);
+      setShowBrowser(true);
+      setPendingWebResult(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulation.status]);
 
   const updateNode = (patch: Partial<PC>) => {
     dispatch({ type: "UPDATE_NODE", payload: { node: { ...node, ...patch } } });
@@ -45,8 +66,17 @@ export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, sa
       destination: pingDest.trim(),
     };
     const result = computePing(nodes, links, req);
-    setPingResult(result);
     dispatch({ type: "START_SIMULATION", payload: req });
+
+    if (simulationMode === "on" && result.success) {
+      // 成功時はステップ完了まで結果を保留
+      setPingResult(null);
+      setPendingPingResult(result);
+    } else {
+      // エラー時 or ステップ実行OFF は即座に表示
+      setPingResult(result);
+      setPendingPingResult(null);
+    }
   };
 
   const handleWeb = () => {
@@ -59,9 +89,19 @@ export default function PcDetail({ node, nodes, links, dispatch, getSnapshot, sa
       url: url as UrlString,
     };
     const result = computeWeb(nodes, links, req);
-    setWebResult(result);
     dispatch({ type: "START_SIMULATION", payload: req });
-    setShowBrowser(true);
+
+    if (simulationMode === "on" && result.success) {
+      // 成功時はステップ完了まで結果を保留
+      setWebResult(null);
+      setShowBrowser(false);
+      setPendingWebResult(result);
+    } else {
+      // エラー時 or ステップ実行OFF は即座に表示
+      setWebResult(result);
+      setShowBrowser(true);
+      setPendingWebResult(null);
+    }
   };
 
   return (
