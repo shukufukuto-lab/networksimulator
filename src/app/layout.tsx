@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Network Simulator",
+  title: "NetworkTopologySimulator",
   description: "ネットワーク初学者向け学習シミュレーター",
 };
 
