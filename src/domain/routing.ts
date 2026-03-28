@@ -182,7 +182,7 @@ const MAX_HOPS = 30;
  * srcId から destIp への経路を計算する。
  * 戻り値は成功時にホップ列（NodeId[]）、失敗時に失敗理由。
  */
-function computeRoute(
+export function computeRoute(
   nodes: Map<NodeId, NetworkNode>,
   links: Map<LinkId, Link>,
   srcId: NodeId,
