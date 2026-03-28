@@ -15,7 +15,7 @@ export default function GlobalNav() {
 
   return (
     <nav className={styles.nav}>
-      <span className={styles.title}>Network Simulator</span>
+      <span className={styles.title}>NetworkTopologySimulator</span>
       <div className={styles.tabs}>
         {TABS.map((tab) => {
           const isActive =
